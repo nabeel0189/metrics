@@ -1,0 +1,125 @@
+anypoint:
+  platform:
+    #Change to anypoint.mulesoft.com  if using the US Control Plane 
+    #Change to eu1.anypoint.mulesoft.com  if using the EU Control Plane 
+    #Change to gov.anypoint.mulesoft.com  if using Gov Cloud
+    #Change to your_domain.com if using PCE
+    host: "anypoint.mulesoft.com" 
+    responseTimeout: "30000"
+    apis:
+      coreservices:
+        maxConcurrency: "100"
+        login:
+          path: "/accounts/login"
+        token:
+          path: "/accounts/api/v2/oauth2/token"
+        hierarchy:
+          path: "/accounts/api/organizations/{orgId}/hierarchy"
+        environments:
+          path: "/accounts/api/organizations/{orgId}/environments"
+        usage:
+          path: "/accounts/api/cs/organizations/{orgId}/usage"
+        members:
+          path: "/accounts/api/organizations/{orgId}/members"
+          limit: "1000"
+          offset: "0"
+        rolegroups:
+          path: "/accounts/api/organizations/{orgId}/rolegroups"
+          limit: "1000"
+          offset: "0"
+      cloudhub:
+        maxConcurrency: "100"
+        apps:
+          path: "/cloudhub/api/v2/applications"
+      arm:
+        maxConcurrency: "3"
+        apps:
+          path: "/hybrid/api/v1/applications"
+        servers:
+          path: "/hybrid/api/v1/servers"
+        clusters:
+          path: "/hybrid/api/v1/clusters"
+        serverGroups:
+          path: "/hybrid/api/v1/serverGroups"
+        deployments:
+          path: "/hybrid/api/v2/organizations/{orgId}/environments/{envId}/deployments"
+        deployment:
+          path: "/hybrid/api/v2/organizations/{orgId}/environments/{envId}/deployments/{deploymentId}"
+      rtf:
+        maxConcurrency: "100"
+        fabrics:
+          path: "/runtimefabric/api/organizations/{orgId}/fabrics"
+      apiManager:
+        maxConcurrency: "100"
+        apis:
+          path: "/apimanager/api/v1/organizations/{orgId}/environments/{envId}/apis"
+        apiPolicies:
+          path: "/apimanager/api/v1/organizations/{orgId}/environments/{envId}/apis/{apiId}/policies"
+          enabled: "true"
+          retries:
+            max: "2"
+            wait: "5000"
+        automatedPolicies:
+          path: "/apimanager/api/v1/organizations/{orgId}/automated-policies"
+        apiDefaultOffset: "100"
+      apiPlatform:
+        maxConcurrency: "100"
+        clients:
+          path: "/apiplatform/repository/v2/organizations/{orgId}/applications"
+          limit: "250"
+          offset: "0"
+          targetAdminSite: "true"
+      designCenter:
+        maxConcurrency: "100"
+        projects:
+          path: "/designcenter/api-designer/projects"
+      analytics:
+        maxConcurrency: "100"
+        retries:
+          max: "2"
+          wait: "5000"
+        events:
+          path: "/analytics/1.0/{orgId}/environments/{envId}/events"
+          duration: "1d"
+          fields: "Browser,City,Client IP,Continent,Country,Hardware Platform,Message ID,OS Family,OS Major Version,OS Minor Version,OS Version,Postal Code,Request Outcome,Request Size,Resource Path,Response Size,Response Time,Status Code,Timezone,User Agent Name,User Agent Version,Verb,Violated Policy Name"
+          format: "json"
+        query:
+          path: "/analytics/1.0/{orgId}/environments/{envId}/query"
+          duration: "30d"
+          timeout: "30000"
+      exchange:
+        maxConcurrency: "1"
+        retries:
+          max: "2"
+          wait: "5000"
+        assets:
+          path: "/exchange/api/v1/assets"
+          limit: "1000"
+        graphql:
+          path: "/graph/api/v2/graphql/"
+          limit: "250"
+      mq:
+        maxConcurrency: "100"
+        period: "8640"
+        regions:
+          path: "/mq/admin/api/v1/organizations/{orgId}/environments/{envId}/regions"
+        destinations:
+          path: "/mq/admin/api/v1/organizations/{orgId}/environments/{envId}/regions/{regionId}/destinations"
+        queues:
+          path: "/mq/stats/api/v1/organizations/{orgId}/environments/{envId}/regions/{regionId}/queues/{queueId}"
+        exchanges:
+          path: "/mq/stats/api/v1/organizations/{orgId}/environments/{envId}/regions/{regionId}/exchanges/{exchangeId}"
+      osv2:
+        maxConcurrency: "100"
+        period: "1day"
+        host: "object-store-stats.anypoint.mulesoft.com"
+        stats:
+          path: "/api/v1/organizations/{orgId}/environments/{envId}"
+            
+
+cache:
+  token:
+    maxEntries: "1"
+    ttl: "60" 
+    expirationInterval: "5" 
+    

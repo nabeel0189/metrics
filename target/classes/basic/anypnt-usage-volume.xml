@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="anypnt-usage-volumeSub_Flow" doc:id="7e6567c4-456b-4dda-9393-468b107671d0" >
+		<set-variable value='#["https://anypoint.mulesoft.com/monitoring/api/organizations/"]' doc:name="val1" doc:id="670f2af4-7a5a-4ba2-b4dd-6a1ef29d0dc4" variableName="val1"/>
+		<set-variable value='#["/environments/"]' doc:name="val2" doc:id="624f0686-4376-4f3e-82c6-bcebbcacca21" variableName="val2"/>
+		<set-variable value='#["/reports/requests/from/now-"]' doc:name="val3" doc:id="ada589c4-5aa9-4923-b35c-20f99f3b21eb" variableName="val3"/>
+		<set-variable value='#["d/to/now"]' doc:name="val4" doc:id="9ff2f5a8-6d1e-40ef-945c-48b76dcef03a" variableName="val4"/>
+		<set-variable value='#[vars.val1 ++ vars.orgId ++ vars.val2 ++ vars.envId ++ vars.val3 ++ vars.days ++ vars.val4]' doc:name="monitor-path" doc:id="a7c2689f-5d0d-469e-81af-7d1de215a9cd" variableName="monitor-path" />
+		<http:request method="GET" doc:name="Request" doc:id="c8d1eb40-16db-4ae9-8c41-63d59673ea39" url="#[vars.'monitor-path']">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization"   : "Bearer " ++ vars.token
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Key" : "Value"
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+</mule>

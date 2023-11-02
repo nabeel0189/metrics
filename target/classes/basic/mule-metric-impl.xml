@@ -1,0 +1,1045 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:dynamodb="http://www.mulesoft.org/schema/mule/dynamodb"
+	xmlns:s3="http://www.mulesoft.org/schema/mule/s3"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	<http:request-config
+		name="HTTP_Request_configuration1"
+		doc:name="HTTP Request configuration"
+		doc:id="6ba19980-674b-4208-816f-58139a8900f9">
+		<http:request-connection protocol="HTTPS"
+			host="anypoint.mulesoft.com" port="443" />
+	</http:request-config>
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="fffc646b-5b89-45a6-92ab-5509a922bee4" file="environment.yaml" />
+	<validation:config name="Validation_Config"
+		doc:name="Validation Config"
+		doc:id="9050f793-2e80-421e-ae12-3143652237e7" />
+	<sub-flow name="mule-metricsSub_Flow"
+		doc:id="465edeb1-73f1-4159-b000-32b3f09b2cc4">
+		<flow-ref doc:name="save-variables"
+			doc:id="df92b5cd-e77e-4392-b4a2-c3cc8e57750f" name="save-variables" />
+		<scatter-gather
+			doc:name="Call diff Env to get Applications"
+			doc:id="3d4240df-9a7a-4a02-9805-b9e27c84886f">
+			<route>
+				<flow-ref doc:name="rtf"
+					doc:id="558e108f-be2b-47fe-a051-7c2f1ef455f7"
+					name="rtf-core-calculator-api-config" />
+			</route>
+			<route >
+				<logger level="INFO" doc:name="Logger" doc:id="91ac8663-e7e0-41bc-a567-eb71db99a507" message="---test"/>
+			</route>
+			
+			<!-- <route>
+				<flow-ref doc:name="dev"
+					doc:id="1f232efd-af80-45f9-bd65-779f172a95f6"
+					name="mule-metric-dev" />
+			</route>
+			<route>
+				<flow-ref doc:name="dev-test"
+					doc:id="32b91abe-1361-463f-beeb-9e8d0632da95"
+					name="mule-metric-dev-test" />
+			</route>
+			<route>
+				<flow-ref doc:name="test"
+					doc:id="10dd3ac7-0805-4f91-bf37-1d1dd5136aad"
+					name="mule-metric-test" />
+			</route>
+			<route>
+				<flow-ref doc:name="test-public"
+					doc:id="d6fdac0b-2c05-4708-8605-d42ba972f6b0"
+					name="mule-metric-test-public" />
+			</route>
+			<route>
+				<flow-ref doc:name="uat"
+					doc:id="91de0675-7f23-4d19-b96a-089b1e5bfcd2"
+					name="mule-metric-uat" />
+			</route>
+			<route>
+				<flow-ref doc:name="uat-public"
+					doc:id="fc125c76-fa76-442a-a615-6e06131c2113"
+					name="mule-metric-uat-public" />
+			</route>
+			<route>
+				<flow-ref doc:name="prod"
+					doc:id="dd960adf-1cc5-4066-86a3-202496c253a5"
+					name="mule-metric-prod" />
+			</route>
+			<route>
+				<flow-ref doc:name="prod-public"
+					doc:id="924f2dc9-4d27-40de-b2d9-7ed20e8caa20"
+					name="mule-metric-prod-public" />
+			</route> -->
+
+		</scatter-gather>
+		<choice doc:name="Choice"
+			doc:id="11f21ecf-2083-4635-a6e3-4757a139b7b4">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="convert response to json"
+					doc:id="76460d3e-4335-4934-ab5f-3ed80fc0e693">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json skipNullOn = "everywhere"
+var combinedPayload = (payload..payload)
+---
+flatten(flatten(combinedPayload)) ]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="csv"
+					doc:id="b3c4d1e7-f971-4a25-9426-e370cdd0081d">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json skipNullOn = "everywhere"
+var combinedPayload = (payload..payload)
+---
+flatten(flatten(combinedPayload)) ]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<ee:transform doc:name="Transform Message"
+					doc:id="a283d79f-799a-4f24-9a5e-39652d8cd7fc">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/csv header=true
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<!-- <flow-ref doc:name="store response" doc:id="03ebfffa-88e7-400e-b6a3-1a4a773a99c5" 
+			name="mule-metric-store-response" /> -->
+
+
+	</sub-flow>
+	<sub-flow name="mule-metric-store-response"
+		doc:id="c8826669-c6bf-469d-9ab9-ce0e6d6ebdac">
+		<set-variable value='#["mule-app-" ++ now()]'
+			doc:name="s3 file name" doc:id="9a81dde8-6431-4a22-b26c-56a804ce2280"
+			variableName="fileName" />
+		<!-- <s3:create-object doc:name="Create object" doc:id="ed22f9d3-869f-4475-a0bf-ed72d1d969ae" 
+			config-ref="Amazon_S3_Configuration" bucketName="#[p('aws.bucket-name')]" 
+			key="#[vars.fileName]" /> -->
+		<logger level="INFO" doc:name="Logger"
+			doc:id="9f11520c-7e4d-4576-b2a4-619d46de7ceb" message="#[payload]" />
+	</sub-flow>
+	<sub-flow name="mule-metric-dev"
+		doc:id="3fc53c24-5ef9-4bbf-adcb-2f47e6e404c4">
+		<set-variable value="dev" doc:name="dev Env"
+			doc:id="12c0c14f-5fde-4f98-a07a-dd81d0fb1e6a" variableName="env" />
+		<set-variable value="${envId.dev}" doc:name="Dev EnvId"
+			doc:id="04bf627d-83a9-4720-9101-fb3a65a33f4b" variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="4a1db832-9305-4c11-a26e-8b96d85439c5"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="d48dc474-465d-4bd2-b212-8155fcaaf7cf"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="6921e5a2-6db1-47a4-b840-700b3f62da0d">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="f6800ab1-5cc6-467b-a7ac-6c7bfc4a51ec">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="f5878344-dc7d-4146-90bc-8c487306ceec">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-dev-test"
+		doc:id="c6138459-656c-47f2-8bf6-51302bc2e831">
+		<set-variable value="dev-public"
+			doc:name="dev-public Env"
+			doc:id="280da440-f8e0-4920-9f84-207870c50d9a" variableName="env" />
+		<set-variable value="${envId.dev-public}"
+			doc:name="dev-public" doc:id="652e625b-0ee4-4e9e-afa9-59a56490ef85"
+			variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="1a6a0b84-eab8-4fc4-a0d0-b84b408d7517"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="3cd92556-087e-4186-87f3-279ce02abc8b"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="9753453b-66f8-4306-831a-9e23819cb07d">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="28b80451-39c5-4eb2-a74e-cefe29c3d616">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="9b83ab4a-dabd-4d7f-b105-e2bcfd13233a">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-test"
+		doc:id="3c44afda-38b1-47c4-98e6-4684c2734569">
+		<set-variable value="test" doc:name="test Env"
+			doc:id="24ca473b-9039-4b7c-8d92-2e518d5667b6" variableName="env" />
+		<set-variable value="${envId.test}" doc:name="test EnvId"
+			doc:id="d4424a20-2b31-4ab3-bb97-0475db17dac4" variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="2c3c1064-1d9b-4a3c-b3bb-f936b4e41862"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="aaa118ec-b3c5-4e40-b0aa-b2d3463dd098"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="b32f2364-17ac-41b7-9a6b-63a64da29e5e">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="eccc4388-6ece-4cbb-9fd0-e5eb2171982c">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="6de84a8c-cc55-4f86-af2d-db2c296c1953">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-test-public"
+		doc:id="063818b1-0f3b-416f-9400-736a4be8ed56">
+		<set-variable value="test-public"
+			doc:name="test-public Env"
+			doc:id="d5de8d3d-cb09-42ad-b09e-d9df77bd1d57" variableName="env" />
+		<set-variable value="${envId.test-public}"
+			doc:name="test-public EnvId"
+			doc:id="2db08cdc-394b-421f-a004-409e367dbcc2" variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="5ad46efc-2ac4-4286-9db9-7e64323c50df"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="007a69d9-f76f-4459-bca8-58d138278af5"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="6a353e34-1b18-4f32-a0f6-3dfc0b6dbc18">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="b7e29e26-1a9b-46eb-84f1-dbd242c44f6c">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="9e0aee01-ba53-42f7-ae7b-6e208841ed94">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-uat"
+		doc:id="b475e86f-9212-4362-8651-bd4131dc866a">
+		<set-variable value="uat" doc:name="uat Env"
+			doc:id="b696bdb2-8384-4f9e-ae71-79bdbf16e79b" variableName="env" />
+		<set-variable value="${envId.uat}" doc:name="uat EnvId"
+			doc:id="1b62aa32-eb8a-4ae6-b12a-1489909bf950" variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="fc12eaec-80ad-498b-b76b-7263fcce3358"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="10852746-2ea0-4a39-ba10-84b3606fe238"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="cd5837a3-21c8-4924-b4ae-865848cdb218">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="e28840a9-6c70-4086-b1c5-6017fc742463">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload..payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="dbfd4cc3-5b51-42db-9ee6-4fb7bfe65f16">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-uat-public"
+		doc:id="841f1736-97dd-4d68-9fbe-060a9a13734d">
+		<set-variable value="uat-public"
+			doc:name="uat-public Env"
+			doc:id="28d21f8e-e7a3-4cd4-8975-ca9bb4c61999" variableName="env" />
+		<set-variable value="${envId.uat-public}"
+			doc:name="uat-public EnvId"
+			doc:id="1c1a6291-892f-454a-a35d-2bcc03ca8d1e" variableName="envId" />
+		<set-variable value="${enterprise.bigid}"
+			doc:name="bigId" doc:id="eed2cedf-a98d-4f96-8e3b-e8fd60f6b389"
+			variableName="bigId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="fa640eb3-6c52-4e07-9b4d-125df1d59aa5"
+			name="platformapi-applications-cloudhub" />
+		<choice doc:name="Choice"
+			doc:id="bca0d74c-853e-4da7-9de1-6be112f245ef">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Transform Message"
+					doc:id="ac2911eb-a736-4453-a7e5-ef973675ef36">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message"
+					doc:id="6c6f9dce-afa4-4888-9288-826b56d1e91e">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mule-metric-prod"
+		doc:id="06f6edec-ee6f-4fee-b92b-358e87d062e1">
+		<set-variable value="prod" doc:name="prod Env"
+			doc:id="220d3f3c-eda5-4ad1-8b18-a8409e094180" variableName="env" />
+		<set-variable value="${envId.prod}" doc:name="prod EnvId"
+			doc:id="9b3bd169-027e-4ab7-a012-21e4f3245407" variableName="envId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="595189eb-fdb9-42f1-a868-7595c44649f8"
+			name="platformapi-applications-cloudhub" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="950a1d48-603e-4f53-87d8-29ef3f09c144">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload..payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="mule-metric-prod-public"
+		doc:id="c1a9815e-a383-41fa-bd86-1cce2d39612a">
+		<set-variable value="prod-public"
+			doc:name="prod-public Env"
+			doc:id="e6ea2fcd-eb2f-4a80-8754-b9ec36bbfd94" variableName="env" />
+		<set-variable value="${envId.prod-public}"
+			doc:name="prod-public EnvId"
+			doc:id="b3fbd56c-e3cd-4e0c-a181-af72e4246dbd" variableName="envId" />
+		<flow-ref doc:name="platformapi-applications-cloudhub"
+			doc:id="070d6477-7ccb-46df-a1ca-d65ce5f945c0"
+			name="platformapi-applications-cloudhub" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="8b5433cb-1fcd-4d85-be85-df371d34c4f4">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload..payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="platformapi-applications-cloudhub"
+		doc:id="df6c8165-7d73-4aae-9b5f-04cc11756da5">
+		<http:request method="GET" doc:name="Request"
+			doc:id="14e50b54-0089-4f24-bf09-5b5ad1fc358f"
+			config-ref="HTTP_Request_configuration1"
+			path="/cloudhub/api/v2/applications">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"X-ANYPNT-ENV-ID" : vars.envId,
+	"Authorization"   : "Bearer " ++ vars.token
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message"
+			doc:id="2a4e9eaa-c341-47d7-b5db-e15cd9e68fc7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/csv header=true
+fun calculateMemory(valueMemory) = if(valueMemory contains " MB memory")
+									  ((valueMemory replace " MB memory" with "") as Number)/1000
+									else if(valueMemory contains " GB memory")
+									  (valueMemory replace " GB memory" with "") as Number  
+								    else 0
+								    
+fun calculateCore(valueCore) = if(valueCore contains " vCores")
+   								  ((valueCore replace " vCores" with "") as Number)
+							  else if(valueCore contains " vCore")
+   								  ((valueCore replace " vCore" with "") as Number)	
+   								  else 0 									    
+
+---  
+payload filter $.status != 'UNDEPLOYED' map (element, index) -> {  
+   'env': vars.env, 
+   "applicationName": element.domain,
+	"cpuUsed": calculateCore(element.workers.'type'.cpu),//((element.workers.'type'.cpu replace " vCores" with "") as Number) ,
+	"memUsed": calculateMemory(element.workers.'type'.memory),//((element.workers.'type'.memory replace " MB memory" with "") as Number)/1000 ,
+	"cpuLimit": 0
+}  ]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger"
+			doc:id="f7c9a97c-e205-4b7d-bd8d-0fe8b88a7870"
+			message="---- #[payload]" />
+	</sub-flow>
+	<flow name="platformapi-applications"
+		doc:id="d81efa42-964c-4be9-80e9-882106ff6b20">
+		<set-variable doc:name="Set Environment Info"
+			doc:id="4b2acea2-ac5b-4abf-b1c4-781b056f15f8" variableName="envInfo"
+			value="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	id: vars.envId,&#10;	envName: vars.env,&#10;	bgId : vars.bigId&#10;}]" />
+		<flow-ref doc:name="list-deployed-apis"
+			doc:id="0aff488e-02e0-4976-b92e-c5449dc1acb5"
+			name="list-deployed-apis" />
+		<set-variable value="#[0]" doc:name="Init Total CPU Used"
+			doc:id="d07236d5-cd7a-40e9-8f52-e090bc0580e3"
+			variableName="totalCPUUsed" mimeType="application/java" />
+		<set-variable value="#[0]"
+			doc:name="Init Total Memory Used"
+			doc:id="950a0231-ab36-45fe-a14c-14cb035d980b"
+			variableName="totalMemUsed" mimeType="application/java" />
+		<foreach doc:name="For Each Extracted Application"
+			doc:id="fe7b46ea-1f48-4fed-83fa-1884a6e849f6"
+			collection="#[vars.filteredApps]">
+			<set-variable value="#[payload]" doc:name="Current App"
+				doc:id="a19df335-d7d4-4416-bf04-98e4ae0b6a79" variableName="currApp" />
+			<flow-ref doc:name="list-details-for-deployment"
+				doc:id="7b46df5f-65c2-45ce-b4ef-d53029fbb4db"
+				name="list-details-for-deployment" />
+			<set-variable
+				value="#[(vars.totalCPUUsed as Number) + (vars.appDetail.cpuUsed as Number)]"
+				doc:name="Count Total CPU"
+				doc:id="e7f2e87e-7b55-4ea2-a03c-c4e1822f1df8"
+				variableName="totalCPUUsed" />
+			<set-variable
+				value="#[(vars.totalMemUsed as Number) + (vars.appDetail.memUsed as Number)]"
+				doc:name="Count Total Memory"
+				doc:id="b155801c-4cf1-4081-8755-661cf4045111"
+				variableName="totalMemUsed" />
+			<scripting:execute engine="groovy"
+				doc:id="7b61b0f6-02fa-49dd-9f39-4f8271c2a4e3"
+				doc:name="Add to Count List">
+				<scripting:code><![CDATA[vars.countList.add(vars.appDetail)]]></scripting:code>
+			</scripting:execute>
+		</foreach>
+		<ee:transform doc:name="Aggregated Data"
+			doc:id="8ef6dd93-7128-468f-8ac7-49630233bf5e">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="aggregatedDataEnv"><![CDATA[%dw 2.0
+output application/java
+---
+
+	{
+		"Environment": vars.envInfo.envName,
+		"Total CPU Used": if (sizeOf(vars.filteredApps) > 0) vars.totalCPUUsed else 0,
+		"Total Memory Used": if (sizeOf(vars.filteredApps) > 0) vars.totalMemUsed else 0,
+		"Application Details": if (sizeOf(vars.filteredApps) > 0) vars.countList else []
+	
+	}
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<scripting:execute engine="groovy"
+			doc:id="8254ab05-1f67-498e-a7db-9795580653b0"
+			doc:name="Add to Environment List">
+			<scripting:code><![CDATA[vars.envList.add(vars.aggregatedDataEnv)]]></scripting:code>
+		</scripting:execute>
+		<http:request method="GET"
+			doc:name="Get List of Existing Sub Orgs for the Root Org"
+			doc:id="fb886e0e-cbc0-4abf-b72a-12ce0038e3d4"
+			config-ref="HTTP_Request_configuration"
+			path="/accounts/api/organizations/{rootOrgID}/hierarchy"
+			target="bgName"
+			targetValue="#[write(payload.name, 'application/java')]">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.token
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"rootOrgID" : vars.envInfo.bgId
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Check Response Type"
+			doc:id="e3748912-82b4-4f32-9d7f-23ba6dcdce69">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<scripting:execute
+					doc:name="Add to Organization Map"
+					doc:id="f25eb9e8-a27c-46d0-be1b-0afd0359edfb" engine="groovy">
+					<scripting:code>vars.orgMap.put(vars.bgName, vars.envList)</scripting:code>
+				</scripting:execute>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Aggregated Data"
+					doc:id="856b11fc-71e8-494d-834a-4578be20765b">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="aggregatedOrgData"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"Organization": vars.bgName,
+	"Environments": vars.envList
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<scripting:execute
+					doc:name="Add to Organization List"
+					doc:id="2acf37f5-713b-4dec-aab1-ab7f03783968" engine="groovy">
+					<scripting:code>vars.orgList.add(vars.aggregatedOrgData)</scripting:code>
+				</scripting:execute>
+			</otherwise>
+		</choice>
+		<set-variable value="#[[]]" doc:name="Clear Count List"
+			doc:id="7919c917-d2e9-4eed-b868-2571515ec53b"
+			variableName="countList" />
+		<set-variable value="#[[]]"
+			doc:name="Clear Environment List"
+			doc:id="b7a62ab9-2b84-43f7-bd50-2394773b654d" variableName="envList" />
+		<logger level="INFO"
+			doc:name="Log End Processing Business Groups"
+			doc:id="32d3d149-f485-45d9-a22c-63c17be34a0c"
+			message='#["Processed Business Group: " ++ vars.envInfo.bgId]' />
+		<choice doc:name="Check Response Type"
+			doc:id="7435fdc2-6391-448f-be17-d365909da2f8">
+			<when expression='#[vars.responseFormat == "json"]'>
+				<ee:transform doc:name="Create JSON Response"
+					doc:id="157dd12a-057d-4974-ba7f-58023da78e32">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="rtfPayload"><![CDATA[%dw 2.0
+output application/json
+---
+vars.orgMap]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Create Response"
+					doc:id="a1395826-f669-4611-8423-4ddc48a8adca">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.orgList]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<ee:transform doc:name="Create CSV Response"
+					doc:id="c8cdac96-3cea-4d06-8e3d-3d046595dce9">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/csv headerLineNumber = 0 , header = true
+---
+payload flatMap  ((payload01, indexOfPayload01) -> (
+    payload01.Environments flatMap (payload02, indexOfPayload02) -> (
+       ( payload02."Application Details" map (value, valuIndex) -> {
+            env: payload02.Environment,
+             "applicationName": value.applicationName,
+              "cpuUsed":value.cpuUsed,
+              "memUsed": value.memUsed,
+               "cpuLimit" : value.cpuLimit
+        })
+    )
+))  
+//++ (payload flatMap  ((payload01, indexOfPayload01) -> (
+ //   payload01.Environments map (payload02, indexOfPayload02) -> {
+  //      Environment: payload02.Environment,
+   //     'Total' : 'Total',
+    //    "Total CPU Used": payload02."Total CPU Used",
+     //   "Total Memory Used": payload02."Total Memory Used"
+    //}
+//)
+//))
+]]></ee:set-payload>
+					</ee:message>
+					<ee:variables>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Log End"
+			doc:id="239de64c-0b21-4d28-90fa-835d4d366979"
+			message="Request Completed" />
+	</flow>
+	<flow name="rtf-core-calculator-api-config">
+		<logger level="INFO" doc:name="Log Start"
+			doc:id="8f9bb0ac-b344-427e-a32b-7a3df7277bd5"
+			message="Request Received" />
+		<set-variable
+			value='#[output application/java&#10;---&#10;"Bearer " ++ vars.token]'
+			doc:name="accessToken" doc:id="639c605e-f881-4d6e-bd07-6fd9b5e8ed17"
+			variableName="accessToken" />
+		<flow-ref doc:name="save-variables"
+			doc:id="da92b316-7492-4ea4-81af-ef0457541ad5" name="save-variables" />
+		<logger level="INFO"
+			doc:name="Log Start Processing Business Groups"
+			doc:id="8c213f4c-d219-4a50-8490-262ad03daf71" />
+		<!-- <foreach doc:name="For Each Business Group" doc:id="be5a898f-4d92-485c-80bd-120b5e622997" 
+			collection="#[vars.retrievedOrgs.orgIds]"> -->
+		<set-variable value="${enterprise.bigid}"
+			doc:name="Save Business Group ID"
+			doc:id="78667134-ed4a-4c0a-bbc2-6565d4a87edf" variableName="bgId" />
+		<logger level="INFO"
+			doc:name="Log Start Processing Business Group"
+			doc:id="f810acc7-03a0-4a81-a469-f169ed82f533"
+			message='#["Processing Business Group: " ++ vars.bgId]' />
+		<flow-ref doc:name="extract-environments-for-bg"
+			doc:id="d7663f25-a72d-429d-9c6f-4ec4523ee69f"
+			name="extract-environments-for-bg" />
+		<foreach doc:name="For Each Environment"
+			doc:id="2c356a60-6afa-4f45-97fc-8efebf8f9efb"
+			collection="#[vars.extractedEnvs]">
+			<set-variable value="#[payload]"
+				doc:name="Set Environment Info"
+				doc:id="f54b2c40-9998-49fb-84e5-7fe57537b11b" variableName="envInfo" />
+			<flow-ref doc:name="list-deployed-apis"
+				doc:id="f34ac250-c316-4f65-8510-8a2e071db9b1"
+				name="list-deployed-apis" />
+			<set-variable value="#[0]"
+				doc:name="Init Total CPU Used"
+				doc:id="fbda0b15-1424-40b5-a91e-44a1b192a9e9"
+				variableName="totalCPUUsed" mimeType="application/java" />
+			<set-variable value="#[0]"
+				doc:name="Init Total Memory Used"
+				doc:id="57beae58-e2d9-4d91-8e4e-2c50f1381a16"
+				variableName="totalMemUsed" mimeType="application/java" />
+			<foreach doc:name="For Each Extracted Application"
+				doc:id="99b29e90-4efe-4a43-84b4-d7ef9e004984"
+				collection="#[vars.filteredApps]">
+				<set-variable value="#[payload]" doc:name="Current App"
+					doc:id="a244eefb-c00e-45f1-b307-ccc3095b8d40"
+					variableName="currApp" />
+				<flow-ref doc:name="list-details-for-deployment"
+					doc:id="3cf26e65-4564-43b2-ac45-fa7c9deb33b2"
+					name="list-details-for-deployment" />
+				<set-variable
+					value="#[(vars.totalCPUUsed as Number) + (vars.appDetail.cpuUsed as Number)]"
+					doc:name="Count Total CPU"
+					doc:id="1434d435-adc8-49fb-ab28-07fe573eb19c"
+					variableName="totalCPUUsed" />
+				<set-variable
+					value="#[(vars.totalMemUsed as Number) + (vars.appDetail.memUsed as Number)]"
+					doc:name="Count Total Memory"
+					doc:id="11c78c01-8fe0-4d59-8dc8-c5283a4f838d"
+					variableName="totalMemUsed" />
+				<scripting:execute engine="groovy"
+					doc:name="Add to Count List"
+					doc:id="9d7cd8d2-27fb-4319-a179-254fcd08d11f">
+					<scripting:code>vars.countList.add(vars.appDetail)</scripting:code>
+				</scripting:execute>
+			</foreach>
+			<ee:transform doc:name="Aggregated Data"
+				doc:id="f70537db-bba6-436b-82a4-f0d704b40638">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="aggregatedDataEnv"><![CDATA[%dw 2.0
+output application/java
+---
+
+       {
+             "Environment": vars.envInfo.envName,
+             "Total CPU Used": if (sizeOf(vars.filteredApps) > 0) vars.totalCPUUsed else 0,
+             "Total Memory Used": if (sizeOf(vars.filteredApps) > 0) vars.totalMemUsed else 0,
+             "Application Details": if (sizeOf(vars.filteredApps) > 0) vars.countList else []
+       
+       }
+]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<set-variable value="#[[]]" doc:name="Clear Count List"
+				doc:id="66289046-aa0f-485c-b26e-d0795cd949a7"
+				variableName="countList" />
+			<scripting:execute
+				doc:name="Add to Environment List"
+				doc:id="26a53862-e0af-4545-98ef-9ffb595996b6" engine="groovy">
+				<scripting:code>vars.envList.add(vars.aggregatedDataEnv)</scripting:code>
+			</scripting:execute>
+
+		</foreach>
+		<http:request method="GET"
+			doc:name="Get List of Existing Sub Orgs for the Root Org"
+			doc:id="c2ae8ae5-1d1a-4a81-b993-2898474d54c1"
+			config-ref="HTTP_Request_configuration"
+			path="/accounts/api/organizations/{rootOrgID}/hierarchy"
+			target="bgName"
+			targetValue="#[write(payload.name, 'application/java')]">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+       "Authorization" : vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+       "rootOrgID" : if(!isEmpty(vars.bigId)) vars.bigId else vars.bgId
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Check Response Type"
+			doc:id="27cc9371-9413-4bf6-8c08-3355111adde6">
+			<when expression='#[vars.inputData.responseType == "json"]'>
+				<scripting:execute
+					doc:name="Add to Organization Map"
+					doc:id="72aac051-1f6d-446a-a5b6-15c7802c600f" engine="groovy">
+					<scripting:code>vars.orgMap.put(vars.bgName, vars.envList)</scripting:code>
+				</scripting:execute>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Aggregated Data"
+					doc:id="1cc7c563-eeff-423e-a02a-6807f7b912a9">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="aggregatedOrgData"><![CDATA[%dw 2.0
+output application/java
+---
+{
+       "Organization": vars.bgName,
+       "Environments": vars.envList
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<scripting:execute
+					doc:name="Add to Organization List"
+					doc:id="30c30573-bf33-46de-9e42-6e4107ae9592" engine="groovy">
+					<scripting:code>vars.orgList.add(vars.aggregatedOrgData)</scripting:code>
+				</scripting:execute>
+			</otherwise>
+		</choice>
+		<set-variable value="#[[]]"
+			doc:name="Clear Environment List"
+			doc:id="3737d276-2b1a-46ce-9ef6-96290b922953" variableName="envList" />
+		<logger level="INFO"
+			doc:name="Log End Processing Business Groups"
+			doc:id="64679875-60d7-466c-b8f8-bae1095a795a"
+			message='#["Processed Business Group: " ++ vars.bgId]' />
+		<!-- </foreach> -->
+
+
+		<choice doc:name="Check Response Type"
+			doc:id="3b658524-39e6-43af-b3b5-2b04461baed6">
+			<when expression='#[vars.inputData.responseType == "json"]'>
+				<ee:transform doc:name="Create JSON Response"
+					doc:id="d89704d5-052b-49b7-bf35-a6193ef64a04">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.orgMap]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Create Response"
+					doc:id="6d8be7a1-8263-4eab-b54a-5753b11f70eb">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.orgList]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<ee:transform doc:name="Create CSV Response"
+					doc:id="37a2ecb3-05fc-4654-affc-4194c363152a">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/csv headerLineNumber = 0 , header = true
+---
+payload flatMap  ((payload01, indexOfPayload01) -> (
+   payload01.Environments flatMap (payload02, indexOfPayload02) -> (
+       ( payload02."Application Details" map (value, valuIndex) -> {
+            Environment: payload02.Environment,
+             "applicationName": value.applicationName,
+              "cpuUsed":value.cpuUsed,
+              "memUsed": value.memUsed,
+               "cpuLimit" : value.cpuLimit
+        })
+    )
+)) /* ++ (payload flatMap  ((payload01, indexOfPayload01) -> (
+   payload01.Environments map (payload02, indexOfPayload02) -> {
+        Environment: payload02.Environment,
+        'Total' : 'Total',
+        "Total CPU Used": payload02."Total CPU Used",
+        "Total Memory Used": payload02."Total Memory Used"
+    }
+)))
+ payload flatMap  ((payload01, indexOfPayload01) -> (
+    payload01.Environments map (payload02, indexOfPayload02) -> {
+        Organization: payload01.Organization,
+        Environment: payload02.Environment,
+        "Total CPU Used": payload02."Total CPU Used",
+        "Total Memory Used": payload02."Total Memory Used"
+    }
+)) */]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Log End"
+			doc:id="9f47fca0-2d29-4057-93d6-7afee6c91187"
+			message="Request Completed" />
+	</flow>
+
+	<sub-flow name="list-deployed-apis"
+		doc:id="a0bd311e-9c41-4312-9e80-b183a8c5b892">
+		<logger level="INFO"
+			doc:name="Log Start Extracting Used Cores for RTF Applications"
+			doc:id="8488f076-1d04-4551-860e-5ca424fca98f"
+			message='#["Before extracting deployed applications for environment ID: " ++ vars.envInfo.id ++ " with name: " ++ vars.envInfo.envName]' />
+		<http:request method="GET" doc:name="List Deployed APIs"
+			doc:id="4978fa22-9f29-4cb4-b6c1-8103279faf1c"
+			config-ref="HTTP_Request_configuration"
+			path="/hybrid/api/v2/organizations/{orgId}/environments/{envId}/deployments">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	Authorization : "Bearer " ++ vars.token
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	envId : vars.envInfo.id,
+	orgId : if(!isEmpty(vars.bigId)) vars.bigId else vars.bgId
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Filter Applications for RTF"
+			doc:id="9d176283-5390-4659-abc1-4f679c8f53e4">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="filteredApps"><![CDATA[%dw 2.0
+output application/java
+---
+payload.items filter ($.target.provider == "MC") map {
+    id: $.id,
+    name: $.name
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO"
+			doc:name="Log End Extracting Used Cores for RTF Applications"
+			doc:id="83f8a11f-79dd-42f5-9cd9-a68f552a46d7"
+			message='#["Extracted deployed applications for environment ID: " ++ vars.envInfo.id ++ " with name: " ++ vars.envInfo.envName]' />
+	</sub-flow>
+	<sub-flow name="list-details-for-deployment"
+		doc:id="673985b3-f948-437a-b57a-b760a7aa3e67">
+		<try doc:name="Try" doc:id="e9d0da01-fdb5-4b70-bb3f-a8fb3c0d4e63">
+			<http:request method="GET"
+				doc:name="Get Details for Each Deployment"
+				doc:id="e1aeed9b-db44-456f-bb85-ce2b4d597f19"
+				config-ref="HTTP_Request_configuration"
+				path="/hybrid/api/v2/organizations/{orgId}/environments/{envId}/deployments/{deploymentId}">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	Authorization :"Bearer " ++ vars.token
+}]]]></http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	deploymentId : vars.currApp.id,
+	envId : vars.envInfo.id,
+	orgId : if(!isEmpty(vars.bigId)) vars.bigId else vars.bgId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler>
+				<on-error-continue enableNotifications="true"
+					logException="true" doc:name="On Error Continue"
+					doc:id="56108cf6-35c1-4048-ade1-c25f33d55559">
+					<logger level="ERROR"
+						doc:name="Log Could Not Retrieve Detail for Current Application"
+						doc:id="9b148e97-ae1d-4a16-a848-4cd944ea09c8"
+						message='#["Could not retrieve details for application: " ++ vars.currApp.name]' />
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Calculating CPU Usage"
+			doc:id="c2c06230-77d0-42ef-9ccf-941ec42045d0">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="appDetail"><![CDATA[%dw 2.0
+output application/java
+---
+if ( 200 == 200 ) {
+	"applicationName":  vars.currApp.name,
+//	"cpuUsed": if ( payload.application.status != "NOT_RUNNING" ) ((((payload.target.deploymentSettings.resources.cpu.reserved) replace "m" with "") as Number) * (payload.target.replicas as Number))/1000 else 0,
+	"cpuUsed": if ( payload.application.status != "NOT_RUNNING" ) ((((if(isEmpty(payload.target.deploymentSettings.cpuReserved)) payload.target.deploymentSettings.resources.cpu.reserved else payload.target.deploymentSettings.cpuReserved) replace "m" with "" replace "Mi" with "") as Number) * (payload.target.replicas as Number))/1000 else 0,
+//	"memUsed": if ( payload.application.status != "NOT_RUNNING" ) ((((payload.target.deploymentSettings.resources.memory.reserved) replace "Mi" with "") as Number) * (payload.target.replicas as Number))/1000 else 0
+       "memUsed": if ( payload.application.status != "NOT_RUNNING" ) ((((if(isEmpty(payload.target.deploymentSettings.memoryReserved)) payload.target.deploymentSettings.resources.memory.reserved else payload.target.deploymentSettings.memoryReserved) replace "m" with "" replace "Mi" with "") as Number) * (payload.target.replicas as Number))/1000 else 0,
+       cpuLimit : if ( payload.application.status != "NOT_RUNNING" ) ((((if(isEmpty(payload.target.deploymentSettings.cpuMax)) payload.target.deploymentSettings.resources.cpu.limit else payload.target.deploymentSettings.cpuMax) replace "m" with "" replace "Mi" with "") as Number) * (payload.target.replicas as Number))/1000 else 0
+      
+}
+else
+{
+	message: "Details not found"
+}
+/*if (attributes.statusCode == 200) {
+	"applicationName": vars.currApp.name,
+    "cpuUsed": if (payload.application.status != "NOT_RUNNING") ((((payload.target.deploymentSettings.cpuReserved) replace "m" with "") as Number) * (payload.target.replicas as Number))/1000 else 0,
+    "memUsed": if (payload.application.status != "NOT_RUNNING") ((((payload.target.deploymentSettings.memoryReserved) replace "Mi" with "") as Number) * (payload.target.replicas as Number))/1000 else 0
+}
+else
+{
+	message: "Details not found"
+} */]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="save-variables"
+		doc:id="75d6921a-207c-4ae4-8515-2726f02cfa4c">
+		<ee:transform doc:name="Save Variables"
+			doc:id="66925a6b-ff3a-43ce-a510-e5767d883870">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="inputData"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	data: payload,
+	responseType: vars.responseFormat default "json",
+	authType: attributes.headers.authType
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[[]]"
+			doc:name="Initialize Core Count List"
+			doc:id="d3961b9f-a961-428f-bb78-77057fee5452"
+			variableName="countList" />
+		<set-variable value="#[[]]"
+			doc:name="Initialize Environment List"
+			doc:id="26bbac0f-7a5b-4555-ba7a-1a6eeda35b4d" variableName="envList" />
+		<scripting:execute engine="groovy"
+			doc:name="Initialize Organization HashMap"
+			doc:id="0c0ef346-bc01-486d-ac20-1cee4925eda3" target="orgMap">
+			<scripting:code><![CDATA[def orgMap = [:]]]></scripting:code>
+		</scripting:execute>
+		<set-variable value="#[[]]"
+			doc:name="Initialize Organization List"
+			doc:id="4b1fb830-f09e-4be1-ac4c-3ff4160a63cc" variableName="orgList" />
+	</sub-flow>
+	<sub-flow name="extract-environments-for-bg"
+		doc:id="0dd777b8-519e-4221-b70d-1eabba798568">
+		<logger level="INFO"
+			doc:name="Log Start Retrieve Environments for Business Group"
+			doc:id="60eff447-be2a-4f54-88b0-08bbf230ec83"
+			message='#["Retrieve Environments for BG: " ++ vars.bgId]' />
+		<http:request method="GET" doc:name="Get Environments"
+			doc:id="0d19786c-f41d-443d-8a3f-6709ddf657ba"
+			config-ref="HTTP_Request_configuration"
+			path="accounts/api/organizations/{businessGroupId}/environments">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : vars.accessToken,
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"businessGroupId" : vars.bgId
+}]]]></http:uri-params>
+		</http:request>
+		<validation:is-true doc:name="Is true"
+			doc:id="4ad174ea-b336-45ef-9c4e-12aa05ecab80"
+			expression="#[attributes.statusCode == 200]"
+			message="Non 200 response received from Anypoint while trying to get environments for the business group" />
+		<ee:transform doc:name="Extract Environments By Type"
+			doc:id="cbf49881-185a-41b1-aa22-100e2724babf">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="extractedEnvs"><![CDATA[%dw 2.0
+output application/java
+---
+payload.data filter (($."type" != 'design' ) ) map {
+    id: $.id,
+    envName: $.name
+} filter !($.envName contains("dr"))]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO"
+			doc:name="Log End Retrieve Environments for Business Group"
+			doc:id="8f33a8df-738f-49b9-9f26-e976a7bf8d87"
+			message='#["Retrieved Environments for BG: "]' />
+	</sub-flow>
+</mule>

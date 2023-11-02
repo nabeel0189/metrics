@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="loader-router-flow" doc:id="c8e9fdd0-4ec7-495e-bbf2-1ed6234e1996" >
+		<logger level="INFO" doc:name="Logger" doc:id="d7315fbe-d0d5-4755-93ac-a093b2d6b8d2" message="Strategy to Load Platform metrics: #[vars.loaderDetails.strategy]"/>
+		<choice doc:name="Choice" doc:id="e673f0db-bf2c-46d2-b5b2-fc70e45befe2" >
+			<when expression="#[vars.loaderDetails.strategy == 'am']">
+				<flow-ref doc:name="loader-anypoint-monitoring" doc:id="20aa80c4-330b-447e-b0cb-077cabc9ca88" name="loader-anypoint-monitoring"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'splunk']">
+				<flow-ref doc:name="loader-splunk-main-flow" doc:id="ede45949-b5f9-4004-a98a-47a288d426b1" name="loader-splunk-hec-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'tableau']">
+				<flow-ref doc:name="loader-tableau-main-flow" doc:id="de20ba38-08f0-4b89-b2a0-219402a2846c" name="loader-tableau-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'csv']">
+				<flow-ref doc:name="loader-csv-main-flow" doc:id="65f19b6d-439f-4b07-abf4-0cc1a1281e92" name="loader-csv-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'json']">
+				<flow-ref doc:name="loader-json-main-flow" doc:id="4391eb71-d6ff-4ede-be37-4e8db692b70a" name="loader-json-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'elk']">
+				<flow-ref doc:name="loader-elk-main-flow" doc:id="7bf1f286-f84d-4b0e-b0b3-f0fa96d57c10" name="loader-elk-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'mongodb']">
+				<flow-ref doc:name="loader-mongodb-main-flow" doc:id="dede2ca2-1eb1-4513-8156-899bc44c188b" name="#['loader-mongodb-main-flow']"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="loader-default-flow" doc:id="173ea082-922f-4f69-b9f3-55f9246f0291" name="loader-default-flow"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="loader-benefits-router-flow" doc:id="e16783da-e945-4467-9b84-3dab05c3b953" >
+		<logger level="INFO" doc:name="Logger" doc:id="9be0e416-ab29-4086-94fa-141f4d722ce5" message="Strategy to Load Platform benefits: #[vars.loaderDetails.strategy]"/>
+		<choice doc:name="Choice" doc:id="7a991914-5a01-45f8-8760-d710de43ab10" >
+			<when expression="#[vars.loaderDetails.strategy == 'am']">
+				<flow-ref doc:name="loader-benefits-anypoint-monitoring" doc:id="172d89b4-f5ae-4f5c-8209-ae9e70b46671" name="loader-benefits-anypoint-monitoring"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'splunk']">
+				<flow-ref doc:name="loader-benefits-splunk-hec-main-flow" doc:id="41866117-d58b-43d0-ab0b-46992be58400" name="loader-benefits-splunk-hec-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'tableau']">
+				<flow-ref doc:name="loader-benefits-tableau-main-flow" doc:id="843f4611-bd19-4888-a910-87b88638083a" name="loader-benefits-tableau-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'csv']">
+				<flow-ref doc:name="loader-benefits-csv-main-flow" doc:id="0ee2a53f-83dc-43ca-b5f5-01fe81a5f1d5" name="loader-benefits-csv-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'json']">
+				<flow-ref doc:name="loader-benefits-json-main-flow" doc:id="efea80f1-d2d7-4bf9-940a-2a4bac41e93a" name="loader-benefits-json-main-flow"/>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'elk']">
+				<flow-ref doc:name="loader-benefits-elk-main-flow" doc:id="c9706c9c-e85e-417c-a87d-90531ee0afda" name="loader-benefits-elk-main-flow"/>
+			</when>		
+			<when expression="#[vars.loaderDetails.strategy == 'mongodb']">
+				<flow-ref doc:name="loader-benefits-mongodb-main-flow" doc:id="f38adc86-dd16-4e59-937c-cb78927defe2" name="#['loader-benefits-mongodb-main-flow']"/>
+			</when>		
+			<otherwise >
+				<flow-ref doc:name="loader-default-flow" doc:id="52ba5200-2a44-4e16-83a1-76125f24fef9" name="loader-benefits-flow"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="loader-sdlc-router-flow" doc:id="ba3ecd92-9941-49f7-ad09-42229171b604" >
+		<logger level="INFO" doc:name="Logger" doc:id="f353e3d0-cf07-4f19-95ec-3880c57e2a24" message="Strategy: #[vars.loaderDetails.strategy]" />
+		<choice doc:name="Choice" doc:id="fecd31fc-8de2-495e-ac87-de8f3c7b4878" >
+			<when expression="#[vars.loaderDetails.strategy == 'am']" >
+				<logger level="WARN" doc:name="Logger" doc:id="d59e2709-6dcd-4228-91c9-01420b999e85" message="AM Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="8ca30650-f1aa-4a2e-8994-ad8b9dfcb44c" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'splunk']" >
+				<logger level="WARN" doc:name="Logger" doc:id="18ad03f3-7703-4060-84cf-3cdb8b47e634" message="Splunk Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="bb509ec6-b7e3-495a-b491-240a8ab31058" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'tableau']" >
+				<logger level="WARN" doc:name="Logger" doc:id="ed713140-a11a-491a-a475-35d617ba6134" message="Tableau Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="f7e50075-1b36-48cc-94e1-15672c273b0e" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'csv']">
+				<logger level="WARN" doc:name="Logger" doc:id="56dc8800-d271-43a9-9d42-0d3e6acc533c" message="CSV Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="efe6056c-95f1-439a-8c72-026c35eb588a" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'json']">
+				<logger level="WARN" doc:name="Logger" doc:id="392fae7b-0830-4c54-b0b6-68902c024b59" message="JSON Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="e72f945c-36c7-49c5-b0cb-44b01176547b" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.loaderDetails.strategy == 'elk']">
+				<logger level="WARN" doc:name="Logger" doc:id="f3f1563c-9e2a-4f4b-8730-f40860b81b1a" message="ELK Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="783813bf-be97-4f77-a7d9-6d0850b67c60" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>		
+			<when expression="#[vars.loaderDetails.strategy == 'mongodb']">
+				<logger level="WARN" doc:name="Logger" doc:id="2a1b7852-8faf-47fa-98a6-03a833730881" message="MongoDB Loader for SDLC not implemented"/>
+				<ee:transform doc:name="Response" doc:id="77660785-bb5f-44c3-abe9-d0d1288bbdf1" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>		
+			<otherwise >
+				<ee:transform doc:name="Response" doc:id="79463e10-6e04-4c52-bbc6-7c0aaf240813" >
+					<ee:message >
+						<ee:set-payload resource="dw/sdlc/post-sdlc-metrics-not-implemented.dwl" />
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

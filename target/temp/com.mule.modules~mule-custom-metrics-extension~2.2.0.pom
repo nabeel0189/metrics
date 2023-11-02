@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.mule.modules</groupId>
+    <artifactId>mule-custom-metrics-extension</artifactId>
+    <version>2.2.0</version>
+    <packaging>mule-extension</packaging>
+    <name>Anypoint Monitoring Custom Metrics Connector - Mule 4</name>
+
+    <parent>
+        <groupId>org.mule.connectors</groupId>
+        <artifactId>mule-certified-parent</artifactId>
+        <version>1.2.4</version>
+    </parent>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.3</version>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <id>nexus-ci-releases-deployer</id>
+            <distributionManagement>
+                <repository>
+                    <id>build-releases</id>
+                    <name>MuleSoft Release Repository</name>
+                    <url>https://nexus.build.msap.io/nexus/content/repositories/releases/</url>
+                </repository>
+                <snapshotRepository>
+                    <id>build-snapshots</id>
+                    <name>MuleSoft Snapshot Repository</name>
+                    <url>https://nexus.build.msap.io/nexus/content/repositories/snapshots/</url>
+                    <uniqueVersion>false</uniqueVersion>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <id>nexus-releases-ee-deployer</id>
+            <distributionManagement>
+                <repository>
+                    <id>mule-releases-ee</id>
+                    <name>Nexus EE Releases</name>
+                    <url>https://repository-master.mulesoft.org/nexus/content/repositories/releases-ee/</url>
+                </repository>
+                <snapshotRepository>
+                    <id>mule-releases-ee</id>
+                    <name>Nexus EE Releases</name>
+                    <url>https://repository-master.mulesoft.org/nexus/content/repositories/releases-ee/</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <id>exchange-devx-deployer</id>
+            <distributionManagement>
+                <repository>
+                    <id>exchange-devx</id>
+                    <name>MuleSoft Exchange DevX Environment</name>
+                    <url>
+                        https://maven.devx.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </repository>
+                <snapshotRepository>
+                    <id>exchange-devx</id>
+                    <name>MuleSoft Exchange DevX Environment</name>
+                    <url>
+                        https://maven.devx.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>exchange-qax-deployer</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>exchange-qax</id>
+                    <name>MuleSoft Exchange QAX Environment</name>
+                    <url>
+                        https://maven.qax.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </repository>
+                <snapshotRepository>
+                    <id>exchange-qax</id>
+                    <name>MuleSoft Exchange QAX Environment</name>
+                    <url>
+                        https://maven.qax.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>exchange-stgx-deployer</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>exchange-stgx</id>
+                    <name>MuleSoft Exchange StageX Environment</name>
+                    <url>
+                        https://maven.stgx.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </repository>
+                <snapshotRepository>
+                    <id>exchange-stgx</id>
+                    <name>MuleSoft Exchange StageX Environment</name>
+                    <url>
+                        https://maven.stgx.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>exchange-stgxdr-deployer</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>exchange-stgxdr</id>
+                    <name>MuleSoft Exchange StageX Disaster Recovery Environment</name>
+                    <url>
+                        https://maven.stgxdr.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </repository>
+                <snapshotRepository>
+                    <id>exchange-stgxdr</id>
+                    <name>MuleSoft Exchange StageX Disaster Recovery Environment</name>
+                    <url>
+                        https://maven.stgxdr.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>exchange-prod-deployer</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>exchange</id>
+                    <name>MuleSoft Exchange Productive Environment</name>
+                    <url>
+                        https://maven.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </repository>
+                <snapshotRepository>
+                    <id>exchange</id>
+                    <name>MuleSoft Exchange Productive Environment</name>
+                    <url>
+                        https://maven.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                    </url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>exchange-prod-eu-deployer</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <deployment.url>
+                    https://maven.eu1.anypoint.mulesoft.com/api/v1/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/maven
+                </deployment.url>
+            </properties>
+            <distributionManagement>
+                <repository>
+                    <id>exchange-prod-eu</id>
+                    <name>MuleSoft Exchange EU Productive Environment</name>
+                    <url>${deployment.url}</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
+
+    <scm>
+        <connection>scm:git:git://github.com:mulesoft/mule-custom-metrics-extension.git</connection>
+        <developerConnection>scm:git:git@github.com:mulesoft/mule-custom-metrics-extension.git</developerConnection>
+        <url>http://github.com/mulesoft/mule-custom-metrics-extension</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <repositories>
+        <repository>
+            <id>build-releases</id>
+            <name>MuleSoft Release Repository</name>
+            <url>https://nexus.build.msap.io/nexus/content/repositories/releases/</url>
+        </repository>
+        <repository>
+            <id>build-snapshots</id>
+            <name>MuleSoft Snapshot Repository</name>
+            <layout>default</layout>
+            <url>https://nexus.build.msap.io/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>mule-ee-releases</id>
+            <name>Mule EE Releases Repository</name>
+            <url>https://repository-master.mulesoft.org/nexus/content/repositories/ci-releases</url>
+        </repository>
+        <repository>
+            <id>mule-ee-snapshots</id>
+            <name>Mule EE Snapshots Repository</name>
+            <url>https://repository-master.mulesoft.org/nexus/content/repositories/ci-snapshots</url>
+        </repository>
+        <repository>
+            <id>mulesoft-releases</id>
+            <name>MuleSoft Releases Repository</name>
+            <url>https://repository-master.mulesoft.org/nexus/content/repositories/releases/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>mulesoft-public</id>
+            <name>MuleSoft Public Repository</name>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>

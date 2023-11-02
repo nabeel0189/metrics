@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_d81efa42_964c_4be9_80e9_882106ff6b20_Output_Variables_filteredApps = Any
+

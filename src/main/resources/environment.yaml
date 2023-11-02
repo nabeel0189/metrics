@@ -1,0 +1,33 @@
+https:
+  private:
+    port: "8092"
+    
+api:
+  id: "17309348"
+
+platform:
+  clientId: "e81882c0762647b9a991dd2aa07cfaaa" 
+  secret: "75E0c0E1F3104Ab1aba50375b3195DC2" 
+
+envId:
+  dev: "396e7cde-6809-4730-9f26-0f1ebbae273b"
+  devname: "dev"
+  dev_bigid : "c6d390b6-43cc-4c8a-88d0-b77d5903ae8b"
+  dev-public: "c3c7aa03-6f5c-43e0-9cf5-ec47b921db71"
+  test: "b50d13ef-356f-4c43-a57f-724950b50fcb"
+  test-public: "b32aa5e4-789c-437c-9dda-befdcfcb4f2d"
+  uat: "cdf3b939-bc26-4509-9266-1f21020579e4"
+  uat-public: "4f05366f-5ca5-4189-905f-88d68b6d40af"
+  prod: "491feea9-1d28-4f93-b485-704aceaa9b24"
+  prod-public: "d6b920f0-1acd-4d23-90a3-478c873bb54c"
+  
+aws:
+  //accessKey: "AKIATCN4JMMUEE44BQZ3"
+  accessKey: "AKIAZMUUJYV5CM35WSHP"
+  //secret: "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"
+  secret: "Q4xlAxTnmCWaeEpnd3Kt+VuPPnSrJQ/vqpB83hsw"
+  bucket-name: "mule-applications"
+  table-name: "mule-applications"
+
+enterprise:
+ bigid: "c6d390b6-43cc-4c8a-88d0-b77d5903ae8b"

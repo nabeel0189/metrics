@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+ 
+ 	<flow name="aggregator-platform-metrics-master-flow" doc:id="eb1775ef-293a-4d3a-a850-a2b1d40dcb16" >
+		<ee:transform doc:name="Set Date and Error Variables" doc:id="a67892a4-a368-4875-b8b0-cddc6db4a09b" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="dw/aggregation/set-date-var.dwl" variableName="date" />
+				<ee:set-variable resource="dw/aggregation/set-errors-var.dwl" variableName="errors" />
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Get Token Flow Reference" doc:id="37f75167-2cdd-44cb-b99a-3ef2457f3180" name="api-call-coreservices-login-flow" target="token" targetValue="#[payload.access_token]" />
+		<flow-ref doc:name="CoreServices - Get Organizations" doc:id="16aa7c72-eb07-4562-b5ff-4844fb287b47" name="api-call-coreservices-organizations-flow"/>
+		<ee:transform doc:name="Build Organizations including master org" doc:id="b250e126-1d95-45a7-8dfe-523a572807b1" >
+			<ee:message >
+				<ee:set-payload resource="dw/aggregation/build-orgs-aggregation.dwl" />
+			</ee:message>
+		</ee:transform>
+		<parallel-foreach doc:name="For Each" doc:id="66c985dd-8f79-415f-aa59-6c00d91ee590" collection="#[payload]">
+			<ee:transform doc:name="Set Org Id, Name and Entitlements Vars" doc:id="5aa60a60-fa15-413d-8910-94bd37cec4ee" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable resource="dw/aggregation/set-org-id-var.dwl" variableName="orgId" />
+					<ee:set-variable resource="dw/aggregation/set-org-name-var.dwl" variableName="orgName" />
+					<ee:set-variable resource="dw/aggregation/set-entitlements-var.dwl" variableName="entitlements" />
+				</ee:variables>
+			</ee:transform>
+			<logger level="INFO" doc:name="Log - Aggregate metrics" doc:id="98fbd6c2-31a0-4ee6-a535-5ff7b8208596" message="Aggregating metrics from the OrgId: #[vars.orgId]"/>
+			<flow-ref doc:name="Aggregator Organization Flow Reference" doc:id="e3c51083-1549-4479-8873-117f2ddc9003" name="aggregator-platform-metrics-org-flow"/>
+		</parallel-foreach>
+		<set-payload value="#[output application/json --- payload.payload]" doc:name="Set Final Payload" doc:id="b1e30b7f-ef61-4cdb-8350-5ed33b6608c5" />
+	</flow>
+	
+	<flow name="aggregator-platform-metrics-org-flow" doc:id="d4eccc5d-3dcf-403a-8391-d67993c74af9">
+		<try doc:name="Try" doc:id="2f4332b3-b6ef-4040-8d31-dd478f2d3d79" >
+			<flow-ref doc:name="CoreServices - Get Environments" doc:id="21d5ad77-7053-4976-bce4-73127d813994" name="api-call-coreservices-environments-flow" target="environments" targetValue='#[payload.data filter ($."type" != "design")]' />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="ec6beefc-4b8f-4e3e-be37-7d0fc6c06470" >
+					<logger level="INFO" doc:name="Logger" doc:id="23bcee64-fed9-4a13-b579-a8c9a93ad32b" message="Getting environments failed"/>
+					<set-variable value="#[vars.errors + error.description]" doc:name="Set Variable" doc:id="c4e8a398-0aef-4722-99db-0c2019e2d2ec" variableName="errors"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<choice doc:name="If there are environments" doc:id="de63e893-f757-447f-8b4b-8566e945387b" >
+			<when expression="#[not isEmpty(vars.environments)]">
+				<scatter-gather doc:name="Scatter-Gather" doc:id="9b9ce41d-173c-4191-ad34-b17eb5f95840">
+					<route>
+						<choice doc:name="If collectors contains ch" doc:id="26ee8f45-60b3-4b0a-a0f8-7c86bd28a82e" >
+							<when expression='#[vars.collectors as Array contains "ch"]'>
+								<flow-ref doc:name="Get CloudHub Apps Metrics " doc:id="4b943a49-d16a-4691-987d-364a82fdcd6f" name="collector-cloudhub-apps-metrics-parallel-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No CH" doc:id="7a37b092-1ef2-47ec-b50f-a4eee11563ec" message="CloudHub Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode."/>
+								<ee:transform doc:name="Set Null Response" doc:id="9fe0e67d-09a3-40e9-9ec5-5694b4503671" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route>
+						<choice doc:name="If collectors contains ex" doc:id="0d6a71b6-25b2-4bb2-9b27-88c08b9b9c17" >
+							<when expression='#[vars.collectors as Array contains "ex"]'>
+								<flow-ref doc:name="Get Exchange Assets" doc:id="91e63905-f657-4b60-9598-2648c4111410" name="collector-exchange-metrics-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No exchange" doc:id="92a3fbf6-56e8-48dc-9241-59ef86d58131" message="Exchange Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="6fdea708-4e77-4d8b-b772-f931019dd200" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route>
+						<flow-ref doc:name="Get API Manager Grouped Metrics" doc:id="86d52559-73b7-4cd2-855d-c6c882ddb132" name="aggregator-platform-metrics-api-manager-flow" />
+					</route>
+					<route>
+						<choice doc:name="If collectors contain core" doc:id="ef46ef19-3da7-4c16-9224-72a2da93ba7d" >
+							<when expression='#[vars.collectors as Array contains "core"]'>
+								<flow-ref doc:name="Get Coreservices Members" doc:id="f6c0878c-2425-45c0-a31f-6ddcf506e816" name="aggregator-platform-metrics-coreservices-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No core services" doc:id="668f1903-f272-4f51-ba66-0db52b7eaa26" message="Core Services Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="ef70b713-f9c2-4455-a65d-f8c6fd511cb9" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route>
+						<choice doc:name="If collectors contains dc" doc:id="c898b202-cd19-468b-8576-3142ea47ca53" >
+							<when expression='#[vars.collectors as Array contains "dc"]'>
+								<flow-ref doc:name="Get Design Center Projects" doc:id="ea5d9ba4-c23c-4ffa-a721-37b55b21c5e8" name="collector-design-center-metrics-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No DC" doc:id="c83f6bba-6dd0-4739-b4b8-153109861821" message="Design Center Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="b23ce061-fd20-4dd4-9c07-70e9870bec9b" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route> 
+					<route>
+						<choice doc:name="If collectors contains arm" doc:id="15a52dd4-a882-42db-9b9a-cb46e3e88573" >
+							<when expression='#[vars.collectors as Array contains "arm"]'>
+								<flow-ref doc:name="Get ARM Metrics " doc:id="98093d75-949d-4bf5-bedb-c4337a438e78" name="aggregator-platform-metrics-arm-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No arm" doc:id="14f5204f-fe32-4441-8cb7-77625f4860b2" message="Anypoint Runtime Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="b87d95c3-db43-47f0-b012-eef8132c7339" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route>
+						<choice doc:name="If collectors contains rtf" doc:id="ee488554-d98d-4eb7-8f66-91a72d4425b8" >
+							<when expression='#[vars.collectors as Array contains "rtf"]'>
+								<flow-ref doc:name="Get RTF Fabrics Metrics" doc:id="fd19bf30-83ba-41d5-ba00-8bff9842e608" name="collector-rtf-fabrics-metrics-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No rtf" doc:id="6ecbb789-68a7-4cb0-a7cf-1e38afca4eac" message="Runtime Fabric Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="2cbad724-f5b1-4820-ab83-5a33c42a3f11" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route>
+						<choice doc:name="If collectors contains apma" doc:id="a3e8080b-6ffb-498d-8211-1be420714613" >
+							<when expression='#[vars.collectors as Array contains "apma"]'>
+								<flow-ref doc:name="Get Analytics Enriched Data " doc:id="18cec5f9-45f4-4e13-8dce-589a6bf2e60e" name="collector-analytics-metrics-parallel-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No analytics" doc:id="023b7d6f-e195-4044-8e3e-dc55797f0936" message="Analytics Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="a0c17e94-85d5-4c2d-b699-c65cb0556fb6" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route >
+						<choice doc:name="If collectors contains amq" doc:id="c42deb5b-85ef-4c29-aa6b-939e90e4957f" >
+							<when expression='#[vars.collectors as Array contains "amq"]'>
+								<flow-ref doc:name="Get MQ Metrics" doc:id="a54001f7-cdb1-4425-a2af-fd3bf5c38fd2" name="collector-mq-metrics-parallel-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No amq" doc:id="26b4934d-5406-47e9-806f-f38c7a8f5afe" message="Anypoint MQ Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="3647bc0f-8bd6-46f8-8cc3-9142b5b38bcc" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+					<route >
+						<choice doc:name="If collectors contains osv2" doc:id="5eda8f9e-1561-460d-8af4-f93b220f0d34" >
+							<when expression='#[vars.collectors as Array contains "osv2"]'>
+								<flow-ref doc:name="Get OSv2 Metrics" doc:id="431455d4-12f3-4bd2-9cae-9d980e3e0571" name="collector-osv2-metrics-parallel-flow" />
+							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Log - No OSv2" doc:id="6a4f1000-eeb4-4a41-9ce8-1c61577c83f6" message="OSv2 Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+								<ee:transform doc:name="Set Null Response" doc:id="6eca4578-0401-465c-a4a4-5581ebc22022" >
+									<ee:message >
+										<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+									</ee:message>
+								</ee:transform>
+							</otherwise>
+						</choice>
+					</route>
+				</scatter-gather>
+				<choice doc:name="If rawData is needed" doc:id="3c420ab6-a0bb-4d47-ad1e-fa6812e35830">
+					<when expression="#[vars.rawData]">
+						<ee:transform doc:name="Build Raw Data Response" doc:id="2df82c21-448b-4380-95b7-a606c6bb7ff8">
+							<ee:message>
+								<ee:set-payload resource="dw/aggregation/build-platform-raw-data-response.dwl" />
+							</ee:message>
+						</ee:transform>
+					</when>
+					<otherwise>
+						<ee:transform doc:name="Build Metrics Aggregated Response" doc:id="d3a90fdc-7f43-40bf-8bfd-9931f3d7eb25">
+							<ee:message>
+								<ee:set-payload resource="dw/aggregation/build-platform-metrics-aggregation.dwl" />
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+				<logger level="INFO" doc:name="Logger" doc:id="7209570d-3ead-473d-bed5-8055b7678d04" message="Metrics aggregated successfully" />
+			</when>
+			<otherwise >
+				<logger level="ERROR" doc:name="Log - Environments is empty" doc:id="b1500ed7-5e1c-456d-bb58-73eca6ef5abc" message="Environments empty, skipping following calls"/>
+				<ee:transform doc:name="Build empty Event" doc:id="e34f2678-f292-48ea-93ec-35541274b1f8" >
+					<ee:message >
+						<ee:set-payload resource="dw/aggregation/build-platform-metrics-empty-aggregation.dwl" />
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="aggregator-platform-metrics-api-manager-flow" doc:id="b3e9af51-5508-434d-bc60-c6415e52f41a">
+		<scatter-gather doc:name="Scatter-Gather" doc:id="23e82c0b-1c49-48a7-ba7d-f36f349da244">
+			<route>
+				<choice doc:name="If collectors contains apm" doc:id="de0599f5-cf05-4814-a0cd-42f038eb469f" >
+					<when expression='#[vars.collectors as Array contains "apm"]'>
+						<flow-ref doc:name="Get API Manager Metrics" doc:id="8685c965-f744-4d78-93cc-38bd863d1e0c" name="collector-apim-parallel-flow" />
+					</when>
+					<otherwise >
+						<logger level="INFO" doc:name="Log - No apim" doc:id="5ba33283-1ebb-401c-8828-d3dee50e855d" message="API Manager Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+						<ee:transform doc:name="Set Null Response" doc:id="520e4d56-1989-4002-8244-3b24768d5f9a" >
+							<ee:message >
+								<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</route>
+			<route>
+				<choice doc:name="If collectors contains apc" doc:id="d916e766-7a7e-471e-b64a-95ad191a8137">
+					<when expression='#[vars.collectors as Array contains "apc"]'>
+						<flow-ref doc:name="Get API Clients" doc:id="d6601612-d593-46bd-ad65-c8dbd6a4222d" name="collector-api-clients-metrics-flow" />
+					</when>
+					<otherwise>
+						<logger level="INFO" doc:name="Log - No api clients" doc:id="bc453cae-215d-441f-9da8-b6d567729622" message="API Client Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+						<ee:transform doc:name="Set Null Response" doc:id="9a653592-c350-4cc0-bca2-327896762aa4">
+							<ee:message>
+								<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</route>
+			<route>
+				<choice doc:name="If collectors contains ap" doc:id="0c171d0e-3df1-4a6d-82bc-93969da65df9">
+					<when expression='#[vars.collectors as Array contains "ap"]'>
+						<flow-ref doc:name="Get Automated Policies" doc:id="fb510868-9c48-43fa-8ed2-6acddee05d95" name="collector-apim-automated-policies-metrics-flow" />
+					</when>
+					<otherwise>
+						<logger level="INFO" doc:name="Log - No policies" doc:id="3bdbd65d-9916-4722-a4d7-c63d9f05d9cb" message="Automated Policies Metrics won't be collected: collector not enabled or not supported for the platform deployment model or authentication mode." />
+						<ee:transform doc:name="Set Null Response" doc:id="23e0278f-1fba-4372-8c73-d545e3ffca61">
+							<ee:message>
+								<ee:set-payload resource="dw/aggregation/set-null-response.dwl" />
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</route>
+		</scatter-gather>
+	</flow>
+	<flow name="aggregator-platform-metrics-arm-flow" doc:id="7de09387-e994-453e-8903-83c876d1d90f">
+		<scatter-gather doc:name="Scatter-Gather" doc:id="5f792b8e-e15c-447d-8e4a-5be4d597574a">
+			<route>
+				<flow-ref doc:name="ARM Deployments Metrics Flow Reference" doc:id="3c9f75a9-0ab2-4235-aea9-2461bd84db04" name="collector-arm-deployments-metrics-parallel-flow" />
+			</route>
+			<route>
+				<flow-ref doc:name="ARM Server Metrics Flow Reference" doc:id="ae9cda3f-d4a8-4114-8c86-6c4d6cc1e69a" name="collector-arm-servers-metrics-parallel-flow" />
+			</route>
+			<route>
+				<flow-ref doc:name="ARM Cluster Metrics Flow Reference" doc:id="88099d00-3386-488e-8b71-32ee74a1f551" name="collector-arm-clusters-metrics-parallel-flow" />
+			</route>
+			<route>
+				<flow-ref doc:name="ARM ServerGroups Metrics Flow Reference" doc:id="a7ee04ab-983c-40c0-8fd6-dee8ca996d0a" name="collector-arm-server-groups-metrics-parallel-flow" />
+			</route>
+			<route>
+				<choice doc:name="Choice" doc:id="c16a46ae-227b-4f73-ba18-91d7f660396e" >
+					<when expression='#[Mule::p("anypoint.platform.apis.arm.apps.enabled") == "true"]'>
+						<flow-ref doc:name="collector-arm-apps-metrics-parallel-flow" doc:id="5e6f9cdb-9067-4c5e-9d89-49825a5209ad" name="collector-arm-apps-metrics-parallel-flow" />
+					</when>
+					<otherwise >
+						<logger level="INFO" doc:name="Logger" doc:id="f0ee97cc-c8c3-47df-8600-da8f767da796" message="ARM:Applications not enabled"/>
+					</otherwise>
+				</choice>
+			</route>	
+		</scatter-gather>
+	</flow>
+	
+	<flow name="aggregator-platform-metrics-coreservices-flow" doc:id="ac2b948d-ac99-4492-934b-4e0d0ff86c97">
+		<scatter-gather doc:name="Scatter-Gather" doc:id="a85c18f0-5d62-4fd4-af53-29c1c8b78cdb">
+			<route>
+				<flow-ref doc:name="Coreservices Members Flow Reference" doc:id="dbf2a38b-768c-4699-9b2d-4c76ee3a0827" name="collector-members-metrics-flow" />
+			</route>
+			<route>
+				<choice doc:name="Choice" doc:id="2d97bc6d-ec1d-42ca-ab74-85d350b4f783" >
+					<when expression="#[vars.authMode != 'connected-app-credentials']">
+						<flow-ref doc:name="Coreservices Usage Flow Reference" doc:id="35a921c3-b6be-4516-aa04-b6df8db56979" name="collector-usage-metrics-flow" />
+					</when>
+					<otherwise >
+						<logger level="INFO" doc:name="Logger" doc:id="f8bf1aad-b0e4-4598-a3f7-82f77f89045c"
+							message="Coreservices::Usage not supported when authentication mode is connected-app-credentials"/>
+					</otherwise>
+				</choice>
+			</route>
+			<route> 
+				<choice doc:name="Choice" doc:id="3b2b68a6-37bd-42f4-9f4f-3a15e650dadd" >
+					<when expression="#[Mule::p(&quot;anypoint.platform.apis.coreservices.rolegroups.enabled&quot;) == &quot;true&quot; and vars.authMode != 'connected-app-credentials']">
+						<flow-ref doc:name="collector-rolegroups-metrics" doc:id="c8970e3e-47c1-46fd-a453-c403ec90e023" name="collector-rolegroups-metrics" />
+					</when>
+					<otherwise >
+						<logger level="INFO" doc:name="Logger" doc:id="74875e88-295e-4655-9811-79244c229045"
+							message='#[if (Mule::p("anypoint.platform.apis.coreservices.rolegroups.enabled") != "true")
+  "Coreservices::RoleGroups not enabled"
+else
+  "Coreservices::RoleGroups not supported when authentication mode is connected-app-credentials"]'/>
+					</otherwise>
+				</choice> 
+			</route> 
+		</scatter-gather>
+	</flow>
+
+</mule>

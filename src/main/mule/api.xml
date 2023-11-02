@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <apikit:config name="api-config" api="resource::c6d390b6-43cc-4c8a-88d0-b77d5903ae8b:metrics-toolkit:1.0.7:raml:zip:metrics-toolkit-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="web-main" doc:id="21dfe96e-4a3e-4810-8a77-9a84600f1a4b">
+        <http:listener doc:name="Listener" doc:id="a7a27ecf-5e78-414d-a4ff-9b8680b1bac1" config-ref="HTTP_Listener_config" path="${embedded.dashboard.path}" />
+        <choice doc:name="Choice" doc:id="e720d2e4-713c-4ee1-8f5d-6180e02af532">
+            <when expression="#[p('embedded.dashboard.enabled')]">
+                <logger level="DEBUG" doc:name="Web UI enabled" doc:id="2e80ee6c-b267-4464-bac3-b82cc4aa7622" message="Web UI enabled; providing static resources" />
+                <http:load-static-resource doc:name="Load static resource" doc:id="7aae6e23-0946-4fd6-a4ce-8459f9f08885" resourceBasePath="${mule.home}/apps/${app.name}/web/" />
+            </when>
+            <otherwise>
+                <logger level="DEBUG" doc:name="Web UI disabled" doc:id="f92de18d-3b3e-4086-b624-6076b9e8ba96" message="Web UI is disabled, so return NOT IMPLEMENTED" />
+                <ee:transform doc:name="Set 501 - Not Implemented" doc:id="ee410da7-4012-4b35-a4ba-fe224ee4e23e">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-not-implemented.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+501 as Number]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+    <flow name="api-main">
+        <http:listener config-ref="HTTP_Listener_config" path="${api.path}">
+            <http:response statusCode="#[vars.httpStatus default 200]" />
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST,VALIDATION:INVALID_BOOLEAN" enableNotifications="true" logException="true">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="f0eda6c8-1ae6-4505-9698-2d34fb4de78a">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-bad-request.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[400]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="3d87f3ef-5463-4d37-b9d0-9354c3a34db2">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-not-found.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="87499c00-9f96-41de-8d43-921028a70206">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-method-not-allowed.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[405]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="959fdafd-68dc-4b72-8c5e-91b8487f1420">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-not-acceptable.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[406]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="4cb1db2c-c917-46ef-8119-ada337afad74">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-unsupported-media-type.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[415]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="1b8ae772-08c4-4ece-84fb-3e6018ec7c5e">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-not-implemented.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[501]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="ANY">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="aeca5166-a6d3-4c3f-b812-1e2783434aee">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-any.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[500]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="api-console">
+        <http:listener config-ref="HTTP_Listener_config" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="89f359e1-73a5-466a-81ec-75564830dc65">
+                    <ee:message>
+                        <ee:set-payload resource="dw/apikit/error-not-found.dwl" />
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\platform-metrics:api-config">
+        <flow-ref doc:name="Set Auth Vars from Headers Flow Reference" doc:id="a99d508d-5bd1-4627-88d1-fec6fb4ed7cf" name="common-set-auth-vars-from-headers" />
+        <flow-ref doc:name="Set Aggregator Details From Query Params Flow Reference" doc:id="526a1967-37bb-499f-a47d-9c469bb3df26" name="common-set-aggregator-vars-from-query-params" />
+        <flow-ref doc:name="Set API Manager Properties Flow Reference" doc:id="7dae5ce0-f409-4c29-bcf1-44e4c7f04166" name="common-set-collector-vars-from-properties-api-manager" />
+        <flow-ref doc:name="Aggregator Master Flow Reference" doc:id="5484cc09-2351-49d6-b728-a0d4b0b0d1b9" name="aggregator-platform-metrics-master-flow" />
+    </flow>
+    <flow name="post:\platform-metrics\load:application\json:api-config">
+        <flow-ref doc:name="Set Auth Vars from Headers Flow Reference" doc:id="e514bd7d-bdbc-4492-844c-b9d4549155f9" name="common-set-auth-vars-from-headers" />
+        <flow-ref doc:name="Set API Manager Properties Flow Reference" doc:id="0a20abbe-35c4-43a7-bba7-6c31517516af" name="common-set-collector-vars-from-properties-api-manager" />
+        <flow-ref doc:name="Set Loader Details From Payload Flow Reference" doc:id="e6cdbaa6-d042-4dda-ad53-a9bcb88ee768" name="common-set-loader-vars-from-payload" />
+        <flow-ref doc:name="Loader Flow Reference" doc:id="9b9b2d75-6d61-40ce-bc19-518cbb135eb8" name="loader-router-flow" />
+    </flow>
+    <flow name="get:\business-metrics:api-config">
+        <flow-ref doc:name="Set Auth Vars from Headers Flow Reference" doc:id="fd377e58-59aa-44cf-ad08-86aab248ef23" name="common-set-auth-vars-from-headers" />
+        <flow-ref doc:name="Set Benefits Vars From Query Params Flow Reference" doc:id="4f874701-0491-483f-879e-7fcf9bac5243" name="common-set-benefits-vars-from-query-params" />
+        <flow-ref doc:name="Set API Manager Properties Flow Reference" doc:id="183741ba-1102-446c-a736-7416ab07cfbc" name="common-set-collector-vars-from-properties-api-manager" />
+        <flow-ref doc:name="Aggregator Platform Benefits Flow Reference" doc:id="ab111296-7f07-480b-b76c-c05de17ae188" name="aggregator-platform-benefits-master-flow" />
+    </flow>
+    <flow name="post:\business-metrics\load:application\json:api-config">
+        <flow-ref doc:name="Set Auth Vars from Headers Flow Reference" doc:id="666ad8cc-9088-4d24-8839-f665a9f9deaa" name="common-set-auth-vars-from-headers" />
+        <flow-ref doc:name="Set API Manager Properties Flow Reference" doc:id="c7ba2905-746b-46e5-a58e-65648625c24d" name="common-set-collector-vars-from-properties-api-manager" />
+        <flow-ref doc:name="Set Loader Details From Payload Flow Reference" doc:id="ad58af15-9a99-49c8-bee5-24d3eb73ee04" name="common-set-loader-vars-from-payload" />
+        <flow-ref doc:name="Set Benefits Vars From Payload Flow Reference" doc:id="c3fa4f76-0f14-40cb-9738-1c7011851bfa" name="common-set-benefits-vars-from-payload" />
+        <flow-ref doc:name="Loader Benfits Flow Reference" doc:id="1117cb81-c116-4ad6-b566-36e4f2d5d30e" name="loader-benefits-router-flow" />
+    </flow>
+    <flow name="get:\sdlc-metrics:api-config">
+        <set-variable value="#[attributes.queryParams.raw]" doc:name="Set Raw Data flag" doc:id="a9f8c832-6093-465b-b738-bdea7988b782" variableName="rawData" />
+        <flow-ref doc:name="Set SDLC Details" doc:id="2e0169ea-1652-48ef-89ca-7bc044121f69" name="common-set-sdlc-details" />
+        <flow-ref doc:name="Aggregator SDLC Flow Reference" doc:id="1dcfab3e-3016-4bed-8234-763027f4760a" name="aggregator-sdlc-metrics-main-flow" />
+    </flow>
+    <flow name="post:\sdlc-metrics\load:api-config">
+        <flow-ref doc:name="Set Loader Details From Payload Flow Reference" doc:id="5be122d9-d5e8-4059-b082-2eab2c5c4845" name="common-set-loader-vars-from-payload" />
+        <flow-ref doc:name="Set SDLC Details" doc:id="700186a4-a8b4-4fc4-bb36-34f80e0129d1" name="common-set-sdlc-details" />
+        <flow-ref doc:name="Loader SDLC Flow Reference" doc:id="c84138ab-9d1d-4edf-840e-12d9458584e4" name="loader-sdlc-router-flow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\applications:api-config">
+        <logger level="INFO" message="get:\platform-metrics\basic\applications:api-config" />
+        <set-variable value="#[attributes.queryParams.'responseFormat']" doc:name="Set Variable" doc:id="18051abc-6486-4ff0-938c-9caa7ddc1ed8" variableName="responseFormat"/>
+		<flow-ref doc:name="get Token" doc:id="f6579e65-86d4-443b-b76a-1fb5a3490eb1" name="mule-metric-token-subflow" />
+        <flow-ref doc:name="getDetails" doc:id="b6a6e69b-fd96-47f6-ada0-606b61f596f0" name="mule-metricsSub_Flow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\applications\(env):api-config">
+        <logger level="INFO" message="TO BE implemented" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\contracts:api-config">
+        <logger level="INFO" message="TO BE implemented" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\active-runtime-vers:api-config">
+        <ee:transform doc:name="global Variables" doc:id="ce1fb56c-8333-4fb0-8690-e6ea4f79ac64">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\active-runtime-vers",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.con'),
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password'	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="retrieve-active-runtime-version-subflow" doc:id="4f1f2867-fc1c-4b13-82bb-2f77f0f66bec" name="retrieve-active-runtime-version-subflow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\env\(envName)\active-runtime-vers:api-config">
+        <ee:transform doc:name="global Variables" doc:id="d5dabbb1-d1cc-49d2-9034-89ed02f267da">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\envs\(envName)\active-runtime-vers",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.seq'),
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password',
+	envName : attributes.uriParams.'envName'
+	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="retrieve-active-runtime-version-subflow" doc:id="566bb9ee-8a74-4dc9-add4-c11d64c58419" name="retrieve-active-runtime-version-subflow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\env\(envName):api-config">
+        <ee:transform doc:name="global Variables" doc:id="66f274aa-2605-440d-ae20-9b729d8709da">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\envs\(envName)",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.seq'),
+	outputFormat : attributes.queryParams.'responseFormat',
+	responseByEmail : attributes.queryParams.'responseByEmail',
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password',
+	email :  attributes.headers.'x-email',
+	envName : attributes.uriParams.'envName'
+	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="main-orchestrator-subflow" doc:id="6df17816-c8ec-4da9-ad84-e1a5dd71dd8d" name="main-orchestrator-subflow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\envs\list:api-config">
+        <ee:transform doc:name="global Variables" doc:id="9a71128c-6fb2-4d34-8e5e-b9b8e3ea0b65">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\envs\list",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.seq'),
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password',
+	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="retrieve-env-list-subflow" doc:id="890c09a9-c216-4838-82e4-01b07abd5da8" name="retrieve-env-list-subflow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\env\(envName)\vcores\count:api-config">
+        <ee:transform doc:name="global properties" doc:id="8d045bc6-62c1-442c-8f00-d9e06384e9b5">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\envs\(envName)\vcores\count",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.seq'),
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password',
+	envName : attributes.uriParams.'envName'
+	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="retrieve-vcores-subflow" doc:id="7a44f0f3-b093-45c0-a3e9-d734c6fa2c07" name="retrieve-vcores-subflow" />
+    </flow>
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\active-runtime-vers:api-config">
+        <ee:transform doc:name="global Variables" doc:id="ff6b15d9-9535-403e-babe-f8fdc4916638">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics\active-runtime-vers",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.con'),
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password'	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="retrieve-active-runtime-version-subflow" doc:id="74e30f72-f675-4ee7-9953-1b976bb6a911" name="retrieve-active-runtime-version-subflow" />
+    </flow>
+    
+    <flow name="get:\platform-metrics\basic\platform-usage-metrics\applications:api-config">
+    <ee:transform doc:name="global Variables" doc:id="78a7f28d-6c2f-4db9-ad96-6b3281532bce">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="globalProperties"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	   
+	endpointFlowName : "get:\platform-usage-metrics",
+	uniqueTransactionId : correlationId,
+	isNotificationEnable : p('smtp.notification.enable') as Boolean default true,
+	processingStrategy : p('processing.strategy.con'),
+	outputFormat : attributes.queryParams.'responseFormat',
+	responseByEmail : attributes.queryParams.'responseByEmail',
+	anypointUser :  attributes.headers.'x-username',
+	anypointPassword :  attributes.headers.'x-password',
+	email :  attributes.headers.'x-email' 
+	
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="main-orchestrator-subflow" doc:id="40197357-b269-4162-b39d-852b931cf12e" name="main-orchestrator-subflow" />
+    
+    </flow>
+	<flow name="get:\platform-metrics\basic\platform-usage-metrics\applications\volume:api-config">
+		<set-variable value="#[attributes.queryParams.orgId]" doc:name="orgId" doc:id="7cade1e2-9d7d-40e9-9a01-9a6a8aaddb61" variableName="orgId" />
+		<set-variable value="#[attributes.queryParams.envId]" doc:name="envId" doc:id="83beac38-025f-4752-afaa-03e008711216" variableName="envId" />
+		<set-variable value="#[attributes.queryParams.days]" doc:name="days" doc:id="37e007f9-3126-4edf-bcdd-9c5cc8758bef" variableName="days" />
+		<flow-ref doc:name="getToken" doc:id="3316dd7a-5912-4c4b-95d1-e33d8ba1c70e" name="mule-metric-token-subflow" />
+		<flow-ref doc:name="Flow Reference" doc:id="6e182197-ac60-4c83-a6a2-5942cae6a43b" name="anypnt-usage-volumeSub_Flow" />
+    </flow>
+	<flow name="get:\platform-metrics\basic\platform-usage-metrics\env\list:api-config">
+        <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[
+  {
+    env_name: "dev",
+    is_prod: "N",
+    env_details: [
+      {
+        inteface: "test001-dev",
+        status: "STARTED",
+        worker_type_name: "Micro",
+        worker_type_weight: null,
+        worker_type_cpu: "0.1 vCores",
+        worker_type_memory: "500 MB memory",
+        amount: 1,
+        last_update_time: "2020-06-06T03:52",
+        mule_ver: "4.2.2",
+        mule_ver_support_endby: "2021-05-03",
+        region: "us-east-2",
+        persistent_queues: false,
+        monitoring_enabled: true,
+        static_ips_enabled: false,
+        ip_addresses: [
+          "77.22.33.45", 
+          "33.32.22.24"
+        ],
+        binary_file_name: "testtimeout-1.0.0-SNAPSHOT-mule-application.jar"
+      }, 
+      {
+        inteface: "test002-dev",
+        status: "STOPPED",
+        worker_type_name: "Micro",
+        worker_type_weight: null,
+        worker_type_cpu: "0.1 vCores",
+        worker_type_memory: "500 MB memory",
+        amount: 1,
+        last_update_time: "2020-06-06T03:52",
+        mule_ver: "4.2.2",
+        mule_ver_support_endby: "2021-05-03",
+        region: "us-east-2",
+        persistent_queues: false,
+        monitoring_enabled: true,
+        static_ips_enabled: false,
+        ip_addresses: [
+          "71.22.33.45", 
+          "31.32.22.24"
+        ],
+        binary_file_name: "testtimeout-2.0.0-SNAPSHOT-mule-application.jar"
+      }
+    ]
+  }, 
+  {
+    env_name: "Prod",
+    is_prod: "Y",
+    env_details: [
+      {
+        inteface: "test001-prod",
+        status: "STARTED",
+        worker_type_name: "Micro",
+        worker_type_weight: null,
+        worker_type_cpu: "0.1 vCores",
+        worker_type_memory: "500 MB memory",
+        amount: 2,
+        last_update_time: "2020-06-06T03:52",
+        mule_ver: "4.2.2",
+        mule_ver_support_endby: "2021-05-03",
+        region: "us-east-2",
+        persistent_queues: false,
+        monitoring_enabled: true,
+        static_ips_enabled: false,
+        ip_addresses: [
+          "72.22.33.45", 
+          "32.32.22.24"
+        ],
+        binary_file_name: "testtimeout-1.0.0-mule-application.jar"
+      }, 
+      {
+        inteface: "test002-prod",
+        status: "STARTED",
+        worker_type_name: "Micro",
+        worker_type_weight: null,
+        worker_type_cpu: "0.1 vCores",
+        worker_type_memory: "500 MB memory",
+        amount: 2,
+        last_update_time: "2020-06-06T03:52",
+        mule_ver: "4.2.2",
+        mule_ver_support_endby: "2021-05-03",
+        region: "us-east-2",
+        persistent_queues: false,
+        monitoring_enabled: true,
+        static_ips_enabled: false,
+        ip_addresses: [
+          "74.22.33.45", 
+          "34.32.22.24"
+        ],
+        binary_file_name: "testtimeout-2.0.0-mule-application.jar"
+      }
+    ]
+  }
+]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>
